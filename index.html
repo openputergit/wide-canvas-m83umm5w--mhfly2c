@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commercial Invoice Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .print-area { width: 210mm; min-height: 297mm; }
+        @media print {
+            .no-print { display: none; }
+            .print-area { margin: 0; padding: 0; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <!-- Navigation Tabs -->
+        <div class="no-print mb-6">
+            <div class="flex space-x-4 border-b">
+                <button onclick="switchTab('inventory')" class="tab-btn px-4 py-2 text-gray-600 hover:text-blue-600">Inventory Management</button>
+                <button onclick="switchTab('invoice')" class="tab-btn px-4 py-2 text-gray-600 hover:text-blue-600">Invoice Generator</button>
+            </div>
+        </div>
+
+        <!-- Inventory Management Section -->
+        <div id="inventory" class="no-print">
+            <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                <h2 class="text-2xl font-bold mb-4">Add to Inventory</h2>
+                <form id="inventoryForm" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" id="productName" placeholder="Product Name" class="p-2 border rounded">
+                        <input type="number" id="quantity" placeholder="Quantity" class="p-2 border rounded">
+                        <input type="number" id="price" placeholder="Price per Unit" class="p-2 border rounded">
+                        <input type="text" id="hsn" placeholder="HSN Code" class="p-2 border rounded">
+                    </div>
+                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">Add Item</button>
+                </form>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-bold mb-4">Inventory List</h2>
+                <div class="overflow-x-auto">
+                    <table id="inventoryTable" class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">HSN</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invoice Generator Section -->
+        <div id="invoice" class="hidden">
+            <div class="no-print bg-white p-6 rounded-lg shadow-md mb-6">
+                <h2 class="text-2xl font-bold mb-4">Invoice Details</h2>
+                <form id="invoiceForm" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" id="buyerName" placeholder="Buyer Name" class="p-2 border rounded">
+                        <input type="text" id="buyerAddress" placeholder="Buyer Address" class="p-2 border rounded">
+                        <input type="text" id="portLoading" placeholder="Port of Loading" class="p-2 border rounded">
+                        <input type="text" id="portDischarge" placeholder="Port of Discharge" class="p-2 border rounded">
+                        <select id="productSelect" class="p-2 border rounded"></select>
+                        <input type="number" id="invoiceQuantity" placeholder="Quantity" class="p-2 border rounded">
+                    </div>
+                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">Add to Invoice</button>
+                </form>
+            </div>
+
+            <!-- Invoice Preview -->
+            <div class="print-area bg-white p-8 shadow-md mx-auto">
+                <div class="border border-gray-300 p-6">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h1 class="text-2xl font-bold">COMMERCIAL INVOICE</h1>
+                            <div class="text-lg font-bold">WESTERN EXPORT</div>
+                            <div class="text-sm">GLOBAL INDUSTRIAL SOLUTION</div>
+                        </div>
+                        <div class="text-right">
+                            <div>Date: <span id="currentDate"></span></div>
+                            <div>Invoice No: <span id="invoiceNumber"></span></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="border p-4">
+                            <h3 class="font-bold">EXPORTER</h3>
+                            <div id="exporterDetails"></div>
+                        </div>
+                        <div class="border p-4">
+                            <h3 class="font-bold">CONSIGNEE/BUYER</h3>
+                            <div id="buyerDetails"></div>
+                        </div>
+                    </div>
+
+                    <table class="w-full mb-6">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="border px-4 py-2">Description</th>
+                                <th class="border px-4 py-2">HSN</th>
+                                <th class="border px-4 py-2">Quantity</th>
+                                <th class="border px-4 py-2">Rate</th>
+                                <th class="border px-4 py-2">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoiceItems"></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="4" class="border px-4 py-2 text-right font-bold">Total:</td>
+                                <td id="totalAmount" class="border px-4 py-2 font-bold"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <div class="mt-8">
+                        <div class="text-sm">Bank Details:</div>
+                        <div id="bankDetails" class="text-sm"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="no-print mt-6 text-center">
+                <button onclick="window.print()" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+                    <i class="bi bi-printer"></i> Print Invoice
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize inventory data structure
+        let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+        let invoiceItems = [];
+        let currentInvoiceNumber = 1;
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', () => {
+            updateInventoryTable();
+            updateProductSelect();
+            setCurrentDate();
+            loadBankDetails();
+        });
+
+        // Switch between tabs
+        function switchTab(tabName) {
+            document.getElementById('inventory').classList.toggle('hidden', tabName !== 'inventory');
+            document.getElementById('invoice').classList.toggle('hidden', tabName !== 'invoice');
+        }
+
+        // Handle inventory form submission
+        document.getElementById('inventoryForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const item = {
+                id: Date.now(),
+                name: document.getElementById('productName').value,
+                hsn: document.getElementById('hsn').value,
+                quantity: parseInt(document.getElementById('quantity').value),
+                price: parseFloat(document.getElementById('price').value)
+            };
+            inventory.push(item);
+            localStorage.setItem('inventory', JSON.stringify(inventory));
+            updateInventoryTable();
+            updateProductSelect();
+            e.target.reset();
+        });
+
+        // Update inventory table
+        function updateInventoryTable() {
+            const tbody = document.querySelector('#inventoryTable tbody');
+            tbody.innerHTML = '';
+            inventory.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4">${item.name}</td>
+                    <td class="px-6 py-4">${item.hsn}</td>
+                    <td class="px-6 py-4">${item.quantity}</td>
+                    <td class="px-6 py-4">$${item.price.toFixed(2)}</td>
+                    <td class="px-6 py-4">
+                        <button onclick="deleteInventoryItem(${item.id})" class="text-red-600 hover:text-red-800">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Delete inventory item
+        function deleteInventoryItem(id) {
+            inventory = inventory.filter(item => item.id !== id);
+            localStorage.setItem('inventory', JSON.stringify(inventory));
+            updateInventoryTable();
+            updateProductSelect();
+        }
+
+        // Update product select dropdown
+        function updateProductSelect() {
+            const select = document.getElementById('productSelect');
+            select.innerHTML = '<option value="">Select Product</option>';
+            inventory.forEach(item => {
+                select.innerHTML += `<option value="${item.id}">${item.name}</option>`;
+            });
+        }
+
+        // Handle invoice form submission
+        document.getElementById('invoiceForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const productId = parseInt(document.getElementById('productSelect').value);
+            const quantity = parseInt(document.getElementById('invoiceQuantity').value);
+            const product = inventory.find(item => item.id === productId);
+
+            if (product && quantity <= product.quantity) {
+                const amount = quantity * product.price;
+                invoiceItems.push({
+                    description: product.name,
+                    hsn: product.hsn,
+                    quantity: quantity,
+                    rate: product.price,
+                    amount: amount
+                });
+
+                // Update inventory quantity
+                product.quantity -= quantity;
+                localStorage.setItem('inventory', JSON.stringify(inventory));
+                updateInventoryTable();
+                updateInvoiceTable();
+                e.target.reset();
+            } else {
+                alert('Invalid quantity or insufficient inventory!');
+            }
+        });
+
+        // Update invoice table
+        function updateInvoiceTable() {
+            const tbody = document.getElementById('invoiceItems');
+            tbody.innerHTML = '';
+            let total = 0;
+
+            invoiceItems.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="border px-4 py-2">${item.description}</td>
+                    <td class="border px-4 py-2">${item.hsn}</td>
+                    <td class="border px-4 py-2">${item.quantity}</td>
+                    <td class="border px-4 py-2">$${item.rate.toFixed(2)}</td>
+                    <td class="border px-4 py-2">$${item.amount.toFixed(2)}</td>
+                `;
+                tbody.appendChild(row);
+                total += item.amount;
+            });
+
+            document.getElementById('totalAmount').textContent = `$${total.toFixed(2)}`;
+        }
+
+        // Set current date
+        function setCurrentDate() {
+            const date = new Date().toLocaleDateString('en-US');
+            document.getElementById('currentDate').textContent = date;
+        }
+
+        // Load bank details
+        function loadBankDetails() {
+            document.getElementById('bankDetails').innerHTML = `
+                A/C NAME: WESTERN EXPORT<br>
+                BANK ADDRESS: KOTAK BANK, CHITRA<br>
+                IFSC CODE: KKBK0003062<br>
+                ACCOUNT NO.: 8014747474<br>
+                SWIFT CODE: KKBKINBBCPC
+            `;
+
+            document.getElementById('exporterDetails').innerHTML = `
+                WESTERN EXPORT<br>
+                PLOT NO.361/B-2,G.I.D.C.CHITRA,<br>
+                BHAVNAGAR-364001(GUJARAT)<br>
+                Tel. No. 0278-443211<br>
+                MOBILE No. 8014747474
+            `;
+        }
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
